@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - otel-network
+
+  service-a:
+    build:
+      context: .
+      dockerfile: service-a/Dockerfile
+    container_name: service-a
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    depends_on:
+      - zipkin
+      - service-b
+    networks:
+      - otel-network
+
+  service-b:
+    build:
+      context: .
+      dockerfile: service-b/Dockerfile
+    container_name: service-b
+    ports:
+      - "8081:8081"
+    environment:
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - WEATHERAPI_KEY=${WEATHERAPI_KEY}
+    depends_on:
+      - zipkin
+    networks:
+      - otel-network
+
+networks:
+  otel-network:
+    driver: bridge
